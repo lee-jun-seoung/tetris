@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="mobile.css" />
     <script src="game.js" defer></script>
   </head>
   <body>
@@ -44,6 +45,16 @@
             </div>
           </div>
           <div class="board-footer"><span><i></i> SYSTEM ONLINE</span><span>10 × 20 GRID</span></div>
+        </div>
+
+        <div class="touch-controls" aria-label="터치 조작">
+          <button class="touch-button" data-action="left" aria-label="왼쪽으로 이동"><span>←</span></button>
+          <button class="touch-button" data-action="rotate" aria-label="블록 회전"><span>↻</span><small>회전</small></button>
+          <button class="touch-button" data-action="right" aria-label="오른쪽으로 이동"><span>→</span></button>
+          <button class="touch-button" data-action="hold" aria-label="블록 보관"><span>HOLD</span></button>
+          <button class="touch-button" data-action="down" aria-label="블록 한 칸 내리기"><span>↓</span></button>
+          <button class="touch-button drop-control" data-action="drop" aria-label="블록 즉시 내리기"><span>DROP</span></button>
+          <button id="touch-pause-button" class="touch-button" data-action="pause" aria-label="일시 정지" disabled><span>Ⅱ</span></button>
         </div>
 
         <aside class="side-panel right-panel">

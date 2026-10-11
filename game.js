@@ -24,6 +24,8 @@
   const overlay = document.querySelector("#overlay");
   const startButton = document.querySelector("#start-button");
   const pauseButton = document.querySelector("#pause-button");
+  const touchPauseButton = document.querySelector("#touch-pause-button");
+  const touchControls = document.querySelector(".touch-controls");
   let board, active, queue, held, canHold, score, lines, level, running, paused, dropCounter, lastTime, animation;
   let bag = [];
   let pieceSerial = 0;
@@ -208,18 +210,26 @@
     visualPiece = null; rotationAnimation = null; lineFlash = null;
     score = 0; lines = 0; level = 1; dropCounter = 0; lastTime = 0; running = true; paused = false;
     ensureQueue(); spawn(); updateStats();
-    overlay.classList.add("hidden"); pauseButton.disabled = false; pauseButton.innerHTML = "Ⅱ <span>일시정지</span>";
+    overlay.classList.add("hidden"); pauseButton.disabled = false; touchPauseButton.disabled = false;
+    pauseButton.innerHTML = "Ⅱ <span>일시정지</span>"; touchPauseButton.innerHTML = "<span>Ⅱ</span>";
     animation = requestAnimationFrame(loop);
   }
   function endGame() {
-    running = false; paused = false; pauseButton.disabled = true;
+    running = false; paused = false; pauseButton.disabled = true; touchPauseButton.disabled = true;
     showOverlay("GAME OVER", `점수 ${String(score).padStart(6, "0")} · ${lines}줄을 지웠어요.`, "다시 시작");
   }
   function togglePause() {
     if (!running) return;
     paused = !paused;
-    if (paused) { cancelAnimationFrame(animation); showOverlay("PAUSED", "잠시 쉬어가도 괜찮아요.", "계속하기"); pauseButton.innerHTML = "▶ <span>계속하기</span>"; }
-    else { overlay.classList.add("hidden"); lastTime = 0; pauseButton.innerHTML = "Ⅱ <span>일시정지</span>"; animation = requestAnimationFrame(loop); }
+    if (paused) {
+      cancelAnimationFrame(animation); showOverlay("PAUSED", "잠시 쉬어가도 괜찮아요.", "계속하기");
+      pauseButton.innerHTML = "▶ <span>계속하기</span>"; touchPauseButton.innerHTML = "<span>▶</span>";
+      touchPauseButton.setAttribute("aria-label", "게임 계속하기");
+    } else {
+      overlay.classList.add("hidden"); lastTime = 0; pauseButton.innerHTML = "Ⅱ <span>일시정지</span>";
+      touchPauseButton.innerHTML = "<span>Ⅱ</span>"; touchPauseButton.setAttribute("aria-label", "일시 정지");
+      animation = requestAnimationFrame(loop);
+    }
   }
   function loop(time = 0) {
     if (!running || paused) return;
@@ -230,6 +240,18 @@
     if (running) animation = requestAnimationFrame(loop);
   }
   function move(dx) { if (!running || paused || collides(active, dx, 0)) return; active.x += dx; draw(); }
+  function runControl(action) {
+    if (action === "pause") { togglePause(); return; }
+    if (!running || paused) return;
+    switch (action) {
+      case "left": move(-1); break;
+      case "right": move(1); break;
+      case "down": if (stepDown()) { score += 1; updateBest(); updateStats(); } draw(); break;
+      case "rotate": tryRotate(1); break;
+      case "drop": hardDrop(); break;
+      case "hold": holdPiece(); break;
+    }
+  }
   function handleKey(event) {
     const keys = ["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " ", "Space"];
     if (keys.includes(event.key)) event.preventDefault();
@@ -249,6 +271,28 @@
 
   startButton.addEventListener("click", () => { if (paused) togglePause(); else start(); });
   pauseButton.addEventListener("click", togglePause);
+  let repeatDelay = null, repeatInterval = null;
+  function stopTouchRepeat() {
+    clearTimeout(repeatDelay); clearInterval(repeatInterval);
+    repeatDelay = null; repeatInterval = null;
+  }
+  const repeatableControls = new Set(["left", "right", "down"]);
+  touchControls.querySelectorAll("[data-action]").forEach(button => {
+    const action = button.dataset.action;
+    if (repeatableControls.has(action)) {
+      button.addEventListener("pointerdown", event => {
+        if (button.disabled) return;
+        event.preventDefault(); stopTouchRepeat(); runControl(action);
+        button.setPointerCapture(event.pointerId);
+        repeatDelay = setTimeout(() => { repeatInterval = setInterval(() => runControl(action), 85); }, 210);
+      });
+      button.addEventListener("pointerup", stopTouchRepeat);
+      button.addEventListener("pointercancel", stopTouchRepeat);
+      button.addEventListener("lostpointercapture", stopTouchRepeat);
+      button.addEventListener("click", event => { if (event.detail === 0) runControl(action); });
+    } else button.addEventListener("click", () => runControl(action));
+  });
+  window.addEventListener("blur", stopTouchRepeat);
   document.addEventListener("keydown", handleKey);
   let touchX = null, touchY = null;
   boardCanvas.addEventListener("touchstart", e => { const t = e.changedTouches[0]; touchX = t.clientX; touchY = t.clientY; }, { passive: true });
