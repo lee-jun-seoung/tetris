@@ -56,6 +56,8 @@
     for (const kick of [0, -1, 1, -2, 2]) if (!collides(active, kick, 0, rotated)) { active.x += kick; active.shape = rotated; draw(); return; }
   }
   function merge() {
+    const toppedOut = active.shape.some((row, y) => row.some((cell, x) => cell && active.y + y < 0));
+    if (toppedOut) { endGame(); return; }
     active.shape.forEach((row, y) => row.forEach((cell, x) => {
       if (cell && active.y + y >= 0) board[active.y + y][active.x + x] = active.type;
     }));
@@ -74,9 +76,12 @@
     if (cleared) {
       const points = [0, 100, 300, 500, 800][cleared] * level;
       score += points; lines += cleared; level = Math.floor(lines / 10) + 1;
-      if (score > best) { best = score; localStorage.setItem("stack-best", String(best)); }
+      updateBest();
       updateStats();
     }
+  }
+  function updateBest() {
+    if (score > best) { best = score; localStorage.setItem("stack-best", String(best)); }
   }
   function spawn() {
     active = queue.shift(); ensureQueue(); canHold = true;
@@ -88,6 +93,7 @@
     const current = active.type;
     if (held) { active = makePiece(held); held = current; }
     else { held = current; spawn(); }
+    if (collides(active)) endGame();
     canHold = false; draw(); drawPreviews();
   }
   function lock() { merge(); }
@@ -99,7 +105,7 @@
   function hardDrop() {
     let distance = 0;
     while (!collides(active, 0, 1)) { active.y++; distance++; }
-    score += distance * 2; updateStats(); lock();
+    score += distance * 2; updateBest(); updateStats(); lock();
   }
   function drawCell(target, x, y, size, color, ghost = false) {
     const pad = Math.max(1, Math.round(size * .07));
@@ -173,7 +179,8 @@
     const delta = lastTime ? time - lastTime : 0;
     lastTime = time; dropCounter += delta;
     if (dropCounter > Math.max(90, 800 - (level - 1) * 65)) stepDown();
-    draw(); animation = requestAnimationFrame(loop);
+    draw();
+    if (running) animation = requestAnimationFrame(loop);
   }
   function move(dx) { if (!running || paused || collides(active, dx, 0)) return; active.x += dx; draw(); }
   function handleKey(event) {
@@ -185,7 +192,7 @@
     switch (event.key) {
       case "ArrowLeft": move(-1); break;
       case "ArrowRight": move(1); break;
-      case "ArrowDown": stepDown(); score += 1; updateStats(); draw(); break;
+      case "ArrowDown": stepDown(); score += 1; updateBest(); updateStats(); draw(); break;
       case "ArrowUp": case "x": case "X": tryRotate(1); break;
       case "z": case "Z": tryRotate(-1); break;
       case " ": case "Space": hardDrop(); break;
