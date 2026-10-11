@@ -98,9 +98,11 @@
   }
   function lock() { merge(); }
   function stepDown() {
-    if (!collides(active, 0, 1)) active.y++;
+    const moved = !collides(active, 0, 1);
+    if (moved) active.y++;
     else lock();
     dropCounter = 0;
+    return moved;
   }
   function hardDrop() {
     let distance = 0;
@@ -192,7 +194,7 @@
     switch (event.key) {
       case "ArrowLeft": move(-1); break;
       case "ArrowRight": move(1); break;
-      case "ArrowDown": stepDown(); score += 1; updateBest(); updateStats(); draw(); break;
+      case "ArrowDown": if (stepDown()) { score += 1; updateBest(); updateStats(); } draw(); break;
       case "ArrowUp": case "x": case "X": tryRotate(1); break;
       case "z": case "Z": tryRotate(-1); break;
       case " ": case "Space": hardDrop(); break;
