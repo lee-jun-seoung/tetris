@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090d18" />
+    <meta name="description" content="브라우저에서 바로 즐기는 미니멀 테트리스 게임" />
+    <title>STACK — 테트리스</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Stack 홈"><span class="brand-mark">▦</span> STACK<span class="brand-dot">.</span></a>
+        <div class="topbar-right"><span class="live-dot"></span><span>READY TO PLAY</span></div>
+      </header>
+
+      <section class="intro">
+        <div class="eyebrow">CLASSIC ARCADE / NO. 001</div>
+        <h1>쌓고, 지우고,<br /><span>다시 시작.</span></h1>
+        <p>블록을 맞춰 라인을 완성하세요.<br class="mobile-break" /> 오래 버틸수록 속도가 빨라집니다.</p>
+      </section>
+
+      <section class="game-layout" aria-label="테트리스 게임">
+        <aside class="side-panel left-panel">
+          <div class="stat-card score-card"><div class="card-label">SCORE</div><div id="score" class="score-value">000000</div><div class="score-caption">YOUR BEST <span id="best">000000</span></div></div>
+          <div class="stat-card"><div class="card-label">LEVEL</div><div id="level" class="stat-value">01</div><div class="meter"><span id="level-meter"></span></div></div>
+          <div class="stat-card"><div class="card-label">LINES</div><div id="lines" class="stat-value">00</div><div class="card-note">LINES CLEARED</div></div>
+          <div class="keyboard-hint"><div class="card-label">CONTROLS</div><div class="key-row"><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><span>MOVE</span></div><div class="key-row"><kbd>↑</kbd><span>ROTATE</span></div><div class="key-row"><kbd>SPACE</kbd><span>DROP</span></div><div class="key-row"><kbd>P</kbd><span>PAUSE</span></div></div>
+        </aside>
+
+        <div class="board-wrap">
+          <div class="board-frame">
+            <canvas id="board" width="300" height="600" aria-label="테트리스 보드"></canvas>
+            <div id="overlay" class="overlay">
+              <div class="overlay-kicker">STACK / 001</div>
+              <div id="overlay-title" class="overlay-title">READY?</div>
+              <p id="overlay-copy">블록을 쌓아 첫 라인을 만들어보세요.</p>
+              <button id="start-button" class="primary-button">게임 시작 <span>↗</span></button>
+            </div>
+          </div>
+          <div class="board-footer"><span><i></i> SYSTEM ONLINE</span><span>10 × 20 GRID</span></div>
+        </div>
+
+        <aside class="side-panel right-panel">
+          <div class="preview-card"><div class="card-label">NEXT UP <span class="tiny-arrow">↘</span></div><canvas id="next" width="120" height="100" aria-label="다음 블록"></canvas></div>
+          <div class="preview-card hold-card"><div class="card-label">HOLD <span class="tiny-arrow">↙</span></div><canvas id="hold" width="120" height="100" aria-label="보관한 블록"></canvas><div class="hold-note">C 키로 보관</div></div>
+          <div class="tip-card"><span class="tip-spark">✳</span><p>한 번에 4줄을 지우면<br /><strong>테트리스!</strong></p></div>
+          <button id="pause-button" class="ghost-button" disabled>Ⅱ <span>일시정지</span></button>
+        </aside>
+      </section>
+
+      <footer class="page-footer"><span>MADE FOR THE JOY OF ONE MORE ROUND.</span><span>© STACK ARCADE 2025</span></footer>
+    </main>
+  </body>
+</html>
