@@ -4,6 +4,9 @@
   const COLS = 10;
   const ROWS = 20;
   const CELL = 30;
+  const MOVE_EASE_MS = 55;
+  const ROTATE_ANIMATION_MS = 135;
+  const LINE_FLASH_MS = 220;
   const COLORS = { I: "#5de3e0", O: "#f5cf69", T: "#b68cff", S: "#83e28f", Z: "#ff7588", J: "#69a8ff", L: "#ffad69" };
   const SHAPES = {
     I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -23,6 +26,10 @@
   const pauseButton = document.querySelector("#pause-button");
   let board, active, queue, held, canHold, score, lines, level, running, paused, dropCounter, lastTime, animation;
   let bag = [];
+  let pieceSerial = 0;
+  let visualPiece = null;
+  let rotationAnimation = null;
+  let lineFlash = null;
   let best = Number(localStorage.getItem("stack-best") || 0);
 
   const emptyBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -36,7 +43,7 @@
   function takeType() { if (!bag.length) refillBag(); return bag.pop(); }
   function makePiece(type = takeType()) {
     const shape = SHAPES[type].map(row => [...row]);
-    return { type, shape, x: Math.floor((COLS - shape[0].length) / 2), y: type === "I" ? -1 : 0 };
+    return { id: ++pieceSerial, type, shape, x: Math.floor((COLS - shape[0].length) / 2), y: type === "I" ? -1 : 0 };
   }
   function ensureQueue() { while (queue.length < 5) queue.push(makePiece()); }
   function collides(piece, dx = 0, dy = 0, shape = piece.shape) {
@@ -53,7 +60,11 @@
   }
   function tryRotate(dir) {
     const rotated = rotate(active.shape, dir);
-    for (const kick of [0, -1, 1, -2, 2]) if (!collides(active, kick, 0, rotated)) { active.x += kick; active.shape = rotated; draw(); return; }
+    for (const kick of [0, -1, 1, -2, 2]) if (!collides(active, kick, 0, rotated)) {
+      active.x += kick; active.shape = rotated;
+      rotationAnimation = { id: active.id, fromAngle: dir > 0 ? -Math.PI / 2 : Math.PI / 2, started: performance.now() };
+      draw(); return;
+    }
   }
   function merge() {
     const toppedOut = active.shape.some((row, y) => row.some((cell, x) => cell && active.y + y < 0));
@@ -66,14 +77,16 @@
   }
   function clearLines() {
     let cleared = 0;
+    const clearedRows = [];
     outer: for (let y = ROWS - 1; y >= 0; y--) {
       if (board[y].every(Boolean)) {
         board.splice(y, 1);
         board.unshift(Array(COLS).fill(null));
-        cleared++; y++; continue outer;
+        clearedRows.push(y); cleared++; y++; continue outer;
       }
     }
     if (cleared) {
+      lineFlash = { rows: clearedRows, started: performance.now() };
       const points = [0, 100, 300, 500, 800][cleared] * level;
       score += points; lines += cleared; level = Math.floor(lines / 10) + 1;
       updateBest();
@@ -128,11 +141,42 @@
   function draw() {
     ctx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
     board.forEach((row, y) => row.forEach((type, x) => { if (type) drawCell(ctx, x, y, CELL, COLORS[type]); }));
+    const now = performance.now();
     if (active) {
       let ghostY = active.y;
       while (!collides({ ...active, y: ghostY }, 0, 1)) ghostY++;
       drawPiece(ctx, { ...active, y: ghostY }, CELL, 0, 0, true);
-      drawPiece(ctx, active, CELL);
+      if (!visualPiece || visualPiece.id !== active.id) visualPiece = { id: active.id, x: active.x, y: active.y };
+      else {
+        const elapsed = Math.max(0, now - (visualPiece.updatedAt || now - 16));
+        const blend = 1 - Math.exp(-elapsed / MOVE_EASE_MS);
+        visualPiece.x += (active.x - visualPiece.x) * blend;
+        visualPiece.y += (active.y - visualPiece.y) * blend;
+      }
+      visualPiece.updatedAt = now;
+      const displayed = { ...active, x: visualPiece.x, y: visualPiece.y };
+      const rotation = rotationAnimation && rotationAnimation.id === active.id ? rotationAnimation : null;
+      if (rotation) {
+        const progress = Math.min(1, Math.max(0, (now - rotation.started) / ROTATE_ANIMATION_MS));
+        const eased = 1 - Math.pow(1 - progress, 3);
+        if (progress < 1) {
+          const size = active.shape.length;
+          ctx.save();
+          ctx.translate((displayed.x + size / 2) * CELL, (displayed.y + size / 2) * CELL);
+          ctx.rotate(rotation.fromAngle * (1 - eased));
+          drawPiece(ctx, { ...displayed, x: -size / 2, y: -size / 2 }, CELL);
+          ctx.restore();
+        } else rotationAnimation = null;
+      } else drawPiece(ctx, displayed, CELL);
+    }
+    if (lineFlash) {
+      const progress = (now - lineFlash.started) / LINE_FLASH_MS;
+      if (progress >= 1) lineFlash = null;
+      else {
+        const opacity = Math.sin(progress * Math.PI) * .42;
+        ctx.fillStyle = `rgba(102, 240, 193, ${opacity})`;
+        lineFlash.rows.forEach(y => ctx.fillRect(0, y * CELL, boardCanvas.width, CELL));
+      }
     }
     drawPreviews();
   }
@@ -161,6 +205,7 @@
   function start() {
     cancelAnimationFrame(animation);
     board = emptyBoard(); queue = []; held = null; canHold = true; bag = [];
+    visualPiece = null; rotationAnimation = null; lineFlash = null;
     score = 0; lines = 0; level = 1; dropCounter = 0; lastTime = 0; running = true; paused = false;
     ensureQueue(); spawn(); updateStats();
     overlay.classList.add("hidden"); pauseButton.disabled = false; pauseButton.innerHTML = "Ⅱ <span>일시정지</span>";
